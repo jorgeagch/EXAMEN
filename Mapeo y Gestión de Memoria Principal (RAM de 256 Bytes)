@@ -1,0 +1,26 @@
+// Memoria RAM de 256 bytes (00h - FFh)
+const RAM = new Uint8Array(256);
+
+// Segmentación Lógica
+const SEGMENTO_CODIGO_INICIO = 0x00; // 00h
+const SEGMENTO_DATOS_INICIO  = 0x80; // 80h (128d)
+
+/**
+ * Operación Primitiva de Lectura
+ */
+function Read(address) {
+  if (address < 0x00 || address > 0xFF) {
+    throw new Error(`Error de Direccionamiento: 0x${address.toString(16).toUpperCase()} fuera de rango (00h-FFh).`);
+  }
+  return RAM[address];
+}
+
+/**
+ * Operación Primitiva de Escritura
+ */
+function Write(address, value) {
+  if (address < 0x00 || address > 0xFF) {
+    throw new Error(`Error de Direccionamiento: 0x${address.toString(16).toUpperCase()} fuera de rango (00h-FFh).`);
+  }
+  RAM[address] = value & 0xFF; // Garantizar valor de 8 bits
+}
