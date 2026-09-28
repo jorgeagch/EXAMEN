@@ -1,0 +1,32 @@
+// Registros Internos del CPU (8 bits)
+let PC  = 0x00; // Program Counter
+let IR  = 0x00; // Instruction Register
+let MAR = 0x00; // Memory Address Register
+let MDR = 0x00; // Memory Data Register
+let AX  = 0x00; // Acumulador
+let BX  = 0x00; // Registro General
+
+// Registro de Banderas (1 bit cada una)
+let Flags = {
+  ZF: 0, // Zero Flag
+  CF: 0, // Carry Flag
+  SF: 0  // Sign Flag
+};
+
+/**
+ * Actualización rigurosa de Banderas según el resultado de la ALU
+ */
+function actualizarBanderas(resultado, huboAcarreo = false) {
+  const res8bits = resultado & 0xFF;
+  
+  // ZF: 1 si el resultado es cero
+  Flags.ZF = (res8bits === 0) ? 1 : 0;
+  
+  // CF: 1 si hubo desbordamiento sin signo (> 255 o < 0)
+  Flags.CF = (huboAcarreo || resultado > 0xFF || resultado < 0) ? 1 : 0;
+  
+  // SF: 1 si el MSB (bit 7) está activo (número negativo en complemento a 2)
+  Flags.SF = ((res8bits & 0x80) !== 0) ? 1 : 0;
+  
+  return res8bits;
+}
