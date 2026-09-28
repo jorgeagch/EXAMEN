@@ -1,0 +1,12 @@
+=== LOG DE MICRO-OPERACIONES (CONSOLA DE EJECUCIÓN) ===
+
+[Paso 01] FETCH:   $MAR = 0x00 -> $MDR = 0x10 -> IR = MOV AX, imm
+[Paso 02] DECODE:  Cargando valor inmediato 0x00 desde RAM[0x01]
+[Paso 03] EXECUTE: AX = 0x00 | Banderas: [ZF:1, CF:0, SF:0]
+
+[Paso 04] FETCH:   $MAR = 0x0A -> $MDR = 0x40 -> IR = ADD AX, 0x03
+[Paso 05] EXECUTE: ALU ADD (0x00 + 0x03) -> Resultado: 0x03
+[Paso 06] STORE:   AX = 0x03 | Banderas: [ZF:0, CF:0, SF:0]
+
+[Paso 07] FETCH:   $MAR = 0x13 -> $MDR = 0xB0 -> IR = JNZ 0x08
+[Paso 08] EXECUTE: Evaluando Zero Flag (ZF=0). Saltando PC a 0x08
