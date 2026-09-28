@@ -1,0 +1,17 @@
+=== PROGRAMA: MULTIPLICACIÓN (3 x 4) CARGADO EN 00H ===
+
+Dirección | Byte (Hex) | Mnemónico / Comentario
+---------------------------------------------------------
+0x00      | 10 00      | MOV AX, 00h   ; AX = 0 (Acumulador del resultado)
+0x02      | 11 03      | MOV BX, 03h   ; BX = 3 (Multiplicando a sumar)
+0x04      | 30 80      | STORE [80h], AX ; Guardar resultado inicial en RAM
+0x06      | 10 04      | MOV AX, 04h   ; AX = 4 (Contador de iteraciones)
+; --- INICIO DEL BUCLE (Dirección 0x08) ---
+0x08      | 20 80      | LOAD AX, [80h]; Cargar acumulador actual
+0x0A      | 40 03      | ADD AX, 03h   ; Sumar 3
+0x0C      | 30 80      | STORE [80h], AX ; Guardar parcial
+0x0E      | 10 04      | MOV AX, 04h   ; Cargar contador
+0x10      | 70         | DEC AX        ; Decrementar contador en 1
+0x11      | 30 81      | STORE [81h], AX ; Guardar contador en RAM
+0x13      | B0 08      | JNZ 08h       ; Si contador != 0, saltar a 0x08
+0x15      | FF         | HLT           ; Fin de ejecución (Resultado 12d / 0Ch en 80h)
