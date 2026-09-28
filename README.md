@@ -1,82 +1,113 @@
-# Simulador de CPU de 8 Bits - Arquitectura von Neumann
+ESPECIFICACIÓN TÉCNICA: SIMULADOR DE CPU DE 8 BITS
+Asignatura: Arquitectura de Computadoras
 
-Este proyecto consiste en la implementación de un simulador didáctico de un procesador de 8 bits basado en la arquitectura von Neumann. El sistema incluye el mapeo completo de memoria RAM de 256 bytes, la estructura de registros internos, el conjunto de instrucciones (ISA), el motor del ciclo de instrucción dividido en 4 fases y un panel de auditoría de micro-operaciones en tiempo real.
+Docente: Ing. Loayza
 
----
+Arquitectura de Referencia: Modelo von Neumann (8 bits)
 
-## 1. Arquitectura del Sistema
+Proyecto: Sistema de Simulación, Ejecución Paso a Paso y Monitoreo de Hardware
 
-El procesador opera bajo un esquema von Neumann donde las instrucciones y los datos comparten el mismo espacio de memoria principal (RAM de 256 bytes).
+1. Visión General del Sistema
+El presente proyecto implementa un simulador funcional de una Unidad Central de Procesamiento (CPU) de 8 bits basado en la arquitectura von Neumann. El sistema integra el mapeo físico de memoria RAM (256 bytes), un conjunto de registros internos, una Unidad Aritmético Lógica (ALU) con gestión de banderas, un decodificador de instrucciones (ISA) y la máquina de estados finitos que ejecuta el ciclo de instrucción de 4 fases (Fetch, Decode, Execute, Store).
 
-```mermaid
+Adicionalmente, el sistema expone un panel de auditoría de micro-operaciones que permite inspeccionar la transferencia de datos entre buses, registros y celdas de memoria en tiempo real durante cada ciclo de reloj.
+
+2. Arquitectura de Hardware y Diagrama de Bloques
+Bajo el paradigma von Neumann, tanto las instrucciones del programa como los datos procesados comparten el mismo bus y el mismo espacio de direccionamiento en la memoria principal.
 graph TD
-    subgraph CPU [Núcleo CPU de 8 Bits]
+    subgraph CPU [Núcleo de Procesamiento CPU]
         PC[Program Counter - PC] --> MAR[Memory Address Register - MAR]
         IR[Instruction Register - IR] --> UC[Unidad de Control - UC]
         UC --> ALU[Unidad Aritmético Lógica - ALU]
-        AX[Acumulador - AX] <--> ALU
+        AX[Acumulador General - AX] <--> ALU
         BX[Registro Auxiliar - BX] <--> ALU
-        ALU --> Flags[Banderas ZF, CF, SF]
+        ALU --> Flags[Banderas: ZF, CF, SF]
     end
 
-    subgraph Memory [Memoria Principal]
-        RAM[Memoria RAM 256 Bytes: 00h - FFh]
+    subgraph Memory [Memoria Principal RAM]
+        RAM[Memoria RAM de 256 Bytes: 00h - FFh]
     end
 
     MAR --> RAM
     RAM <--> MDR[Memory Data Register - MDR]
     MDR <--> IR
     MDR <--> AX
-2. Mapa de Memoria RAM
-La memoria RAM de 256 bytes está mapeada dentro del rango hexadecimal 00h a FFh:
+    MDR <--> BX
+Implementación Primitiva de Lectura y Escritura
+const RAM = new Uint8Array(256);
 
-00h - 7Fh: Segmento de Código (almacenamiento de opcodes y operandos de programas).
+function Read(address) {
+  if (address < 0x00 || address > 0xFF) {
+    throw new Error("Acceso a memoria fuera del rango permitido (00h-FFh)");
+  }
+  return RAM[address];
+}
 
-80h - FFh: Segmento de Datos (almacenamiento de variables, acumuladores y resultados parciales).
-
-3. Registros del Procesador y Banderas
-Registros Internos
-PC (Program Counter - 8 bits): Contiene la dirección de memoria de la siguiente instrucción a ejecutar.
-
-IR (Instruction Register - 8 bits): Almacena la instrucción leída desde la RAM durante la fase de Fetch.
-
-MAR (Memory Address Register - 8 bits): Sostiene la dirección física de la RAM a la que se desea acceder.
-
-MDR (Memory Data Register - 8 bits): Registro intermedio de datos leídos o por escribir en la RAM.
-
-AX (Acumulador General - 8 bits): Registro principal para operaciones aritméticas y lógicas de la ALU.
-
-BX (Registro Auxiliar - 8 bits): Registro secundario de uso general.
-
-Banderas de Estado (ALU)
-ZF (Zero Flag): Se establece en 1 si el resultado de la última operación fue cero (0x00).
-
-CF (Carry Flag): Se establece en 1 si existió desbordamiento superior (> 255) o inferior (< 0).
-
-SF (Sign Flag): Se establece en 1 si el bit más significativo (Bit 7) del resultado está activo.
-4. Conjunto de Instrucciones (ISA)MnemónicoOpcode (Hex)LongitudDescripciónMOV AX, imm0x102 BytesCarga un valor inmediato de 8 bits en el registro AXMOV BX, imm0x112 BytesCarga un valor inmediato de 8 bits en el registro BXLOAD AX, [dir]0x202 BytesLee el contenido de la memoria en dir y lo guarda en AXLOAD BX, [dir]0x212 BytesLee el contenido de la memoria en dir y lo guarda en BXSTORE [dir], AX0x302 BytesEscribe el valor actual de AX en la dirección dir de la RAMSTORE [dir], BX0x312 BytesEscribe el valor actual de BX en la dirección dir de la RAMADD AX, imm0x402 BytesSuma un valor inmediato a AX y actualiza banderasSUB AX, imm0x502 BytesResta un valor inmediato a AX y actualiza banderasINC AX0x601 ByteIncrementa AX en 1DEC AX0x701 ByteDecrementa AX en 1 y actualiza banderasCMP AX, imm0x802 BytesCompara AX con un valor inmediato actualizando banderasJMP dir0x902 BytesSalto incondicional a la dirección especificadaJZ dir0xA02 BytesSalto condicional si la bandera Zero Flag (ZF) es 1JNZ dir0xB02 BytesSalto condicional si la bandera Zero Flag (ZF) es 0HLT0xFF1 ByteDetiene la ejecución del ciclo de reloj5. Ciclo de Instrucción (4 Fases)El motor del simulador procesa cada instrucción dividiéndola estrictamente en 4 fases de reloj:Fetch (Búsqueda): Transfiere el contenido de PC a MAR, lee el opcode de la RAM hacia MDR y lo carga en IR. Incrementa PC.Decode (Decodificación): Evalúa el opcode en IR y determina si requiere leer un segundo byte de operando desde RAM.Execute (Ejecución): Realiza la operación lógica/aritmética correspondiente en la ALU o efectúa la bifurcación de control.Store (Almacenamiento): Escribe el resultado final en el registro destino (AX/BX) o en la RAM mediante MAR y MDR.
-6. Programa de Prueba: Multiplicación por Sumas Sucesivas
-El repositorio incluye un programa cargado en RAM a partir de la dirección 00h que calcula el producto de 3 x 4:
-Dirección | Opcode / Datos | Código Ensamblador  | Comentario
---------------------------------------------------------------------------------------
-0x00      | 10 00          | MOV AX, 00h         | Inicializa resultado acumulado en 0
-0x02      | 11 03          | MOV BX, 03h         | Carga el multiplicando (3)
-0x04      | 30 80          | STORE [80h], AX     | Guarda parcial en RAM[80h]
-0x06      | 10 04          | MOV AX, 04h         | Carga contador (4)
-0x08      | 20 80          | LOAD AX, [80h]      | Inicio del bucle: Cargar parcial
-0x0A      | 40 03          | ADD AX, 03h         | Suma el multiplicando (+3)
-0x0C      | 30 80          | STORE [80h], AX     | Guarda resultado parcial
-0x0E      | 10 04          | MOV AX, 04h         | Recupera valor de iteraciones
-0x10      | 70             | DEC AX              | Decrementa el contador en 1
-0x11      | 30 81          | STORE [81h], AX     | Guarda contador actualizado
-0x13      | B0 08          | JNZ 08h             | Salta a 0x08 si el contador != 0
-0x15      | FF             | HLT                 | Fin. Resultado 12d (0Ch) en RAM[80h]
-7. Estructura de Control y Metodología del Proyecto
-Este proyecto se desarrolló aplicando la metodología Kanban vinculando los commits del repositorio directamente a los Issues de GitHub Projects:
-
-Gestión de Tareas: Tablero Kanban con flujo To Do, In Progress y Done.
-
-Commits Semánticos: Enlazados atómicamente a cada tarea mediante referencias closes #N.
+function Write(address, value) {
+  if (address < 0x00 || address > 0xFF) {
+    throw new Error("Acceso a memoria fuera del rango permitido (00h-FFh)");
+  }
+  RAM[address] = value & 0xFF; // Máscara para garantizar 8 bits
+}
+3. Mapeo y Segmentación de Memoria RAM
+El espacio de direccionamiento del sistema abarca un total de 256 bytes direccionables mediante un bus de direcciones de 8 bits (rango hexadecimal 00h a FFh).
+Rango de Memoria,Tamaño,Segmento,Descripción y Uso Principal
+00h - 7Fh,128 Bytes,Segmento de Código,Reservado para la carga secuencial de opcodes y operandos inmediatos/direcciones del programa.
+80h - FFh,128 Bytes,Segmento de Datos,"Reservado para el almacenamiento dinámico de variables, acumulación de resultados y contadores."
+4. Registros del Procesador y Banderas de la ALU
+4.1 Registros Internos de Procesamiento
+Registro,Tamaño,Tipo,Función Principal
+PC,8 Bits,Control,Program Counter: Dirección de la siguiente instrucción a ejecutar. Incrementa automáticamente.
+IR,8 Bits,Control,Instruction Register: Almacena el opcode de la instrucción actual traído desde la RAM.
+MAR,8 Bits,Memoria,Memory Address Register: Dirección física que se desea colocar en el bus de memoria.
+MDR,8 Bits,Memoria,Memory Data Register: Buffer bidireccional para datos leídos o por escribir en la RAM.
+AX,8 Bits,Datos,Acumulador General: Registro principal para operaciones aritméticas y lógica.
+BX,8 Bits,Datos,Registro Auxiliar: Registro secundario para operandos y almacenamiento de soporte.
+4.2 Banderas de Estado de la ALU (Flags)
+Bandera,Nombre,Condición de Activación (1)
+ZF,Zero Flag,Se activa si el resultado de la última operación en la ALU es exactamente igual a 0x00.
+CF,Carry Flag,Se activa si ocurrió un desbordamiento superior (> 255) o subdesbordamiento (< 0).
+SF,Sign Flag,"Refleja el bit más significativo (Bit 7), indicando un valor negativo en complemento a dos."
+5. Conjunto de Instrucciones (ISA - Instruction Set Architecture)
+El procesador implementa un conjunto de instrucciones reducidas (RISC de 8 bits) parametrizado bajo la siguiente especificación:
+Mnemónico,Opcode (Hex),Tamaño,Descripción Funcional
+"MOV AX, imm",0x10,2 Bytes,Carga un byte inmediato directamente en el registro AX.
+"MOV BX, imm",0x11,2 Bytes,Carga un byte inmediato directamente en el registro BX.
+"LOAD AX, [dir]",0x20,2 Bytes,Lee el byte en la dirección dir de la RAM y lo almacena en AX.
+"LOAD BX, [dir]",0x21,2 Bytes,Lee el byte en la dirección dir de la RAM y lo almacena en BX.
+"STORE [dir], AX",0x30,2 Bytes,Escribe el valor actual de AX en la dirección dir de la RAM.
+"STORE [dir], BX",0x31,2 Bytes,Escribe el valor actual de BX en la dirección dir de la RAM.
+"ADD AX, imm",0x40,2 Bytes,"Suma un valor inmediato a AX y actualiza banderas (ZF, CF, SF)."
+"SUB AX, imm",0x50,2 Bytes,"Resta un valor inmediato a AX y actualiza banderas (ZF, CF, SF)."
+INC AX,0x60,1 Byte,Incrementa el registro AX en 1 unidad.
+DEC AX,0x70,1 Byte,Decrementa el registro AX en 1 unidad y actualiza banderas.
+"CMP AX, imm",0x80,2 Bytes,Compara AX con un inmediato (resta interna) y actualiza banderas.
+JMP dir,0x90,2 Bytes,Modifica el PC para forzar un salto incondicional a dir.
+JZ dir,0xA0,2 Bytes,Bifurcación condicional a dir si la bandera ZF está activa (1).
+JNZ dir,0xB0,2 Bytes,Bifurcación condicional a dir si la bandera ZF está inactiva (0).
+HLT,0xFF,1 Byte,Detiene el ciclo de ejecución del procesador.
+6. Motor del Ciclo de Instrucción (4 Fases)
+La ejecución de cada instrucción se divide strictly en 4 fases secuenciales sincronizadas:
+Fase,Nombre,Descripción Técnica de Micro-operaciones
+1,Fetch,"Transfiere la dirección desde PC hacia MAR, ejecuta la lectura en RAM hacia MDR y carga el opcode en IR. Incrementa PC."
+2,Decode,Evalúa el opcode almacenado en IR para determinar si requiere lectura de operandos adicionales sobre el bus de memoria.
+3,Execute,La Unidad de Control habilita los caminos de datos en la ALU o efectúa la actualización del registro PC en caso de saltos (JMP/JZ/JNZ).
+4,Store,"Consolida la actualización de registros de destino (AX, BX) o la escritura en celdas de RAM (STORE)."
+7. Programa de Prueba: Multiplicación por Sumas Sucesivas
+Para validar el comportamiento del procesador frente a estructuras de control iterativas (bucles) y saltos condicionales, se carga en el segmento de código el programa para resolver la multiplicación de 3 x 4:
+Dirección,Opcode / Datos,Ensamblador,Descripción Técnica
+0x00,10 00,"MOV AX, 00h",Inicializa el acumulador AX en 0
+0x02,11 03,"MOV BX, 03h",Carga el multiplicando (3d) en BX
+0x04,30 80,"STORE [80h], AX",Guarda resultado parcial en RAM[80h]
+0x06,10 04,"MOV AX, 04h",Carga contador de iteraciones (4d) en AX
+0x08,20 80,"LOAD AX, [80h]",[Inicio Bucle]: Carga parcial desde RAM[80h]
+0x0A,40 03,"ADD AX, 03h",Suma el multiplicando (AX + 3)
+0x0C,30 80,"STORE [80h], AX",Guarda nuevo parcial en RAM[80h]
+0x0E,10 04,"MOV AX, 04h",Carga el contador actual
+0x10,70,DEC AX,Decrementa el contador en 1
+0x11,30 81,"STORE [81h], AX",Actualiza contador en RAM[81h]
+0x13,B0 08,JNZ 08h,"Evalúa ZF: Si ZF == 0, salta a 0x08"
+0x15,FF,HLT,Parada: Resultado 12d (0Ch) en RAM[80h]
 8. Formato de Auditoría y Log de Micro-operaciones
 El simulador genera trazas de auditoría por consola durante el procesamiento paso a paso:
 [CLOCK 01] FETCH   -> MAR: 0x00 | MDR: 0x10 | IR: MOV AX, imm | PC: 0x01
@@ -88,8 +119,15 @@ El simulador genera trazas de auditoría por consola durante el procesamiento pa
 [CLOCK 07] FETCH   -> MAR: 0x13 | MDR: 0xB0 | IR: JNZ 0x08 | PC: 0x14
 [CLOCK 08] EXECUTE -> Evaluación Banderas: ZF=0. Condición cumplida -> Modificando PC = 0x08
 9. Metodología de Desarrollo e Integración Continua
-El proyecto fue gestionado aplicando la metodología agil Kanban vinculada con el control de versiones Git/GitHub:
-
-Gestión de Tareas: Tablero Kanban con trazabilidad en tres estados (To Do, In Progress, Done).
-
-Commits Semánticos: Enlazados atómicamente a cada Issue del repositorio utilizando referencias closes #N para garantizar el registro de progreso requerido en el proceso de evaluación.
+El proyecto se gestionó bajo la metodología Kanban mediante GitHub Projects y control de versiones semántico con Git:
+Estado Kanban,ID Tarea,Nombre de la Tarea / Issue,Vinculación Git / Commit
+Done,#1,feat: IMPLEMENTAR LA ARQUITECTURA Y MAPEO DE LA MEMORIA RAM DE 256 BYTES (00H-FFH),closes #1
+Done,#2,feat: Estructura de registros del CPU y banderas de estado ALU,closes #2
+Done,#3,feat: Especificación del conjunto de instrucciones ISA y opcodes,closes #3
+Done,#4,feat: Motor del ciclo de instrucción completo en 4 fases,closes #4
+In Progress,#5,test: Programa demostrativo de multiplicación por sumas sucesivas,closes #5
+In Progress,#6,ui: Consola de log y registro de micro-operaciones en tiempo real,closes #6
+In Progress,#7,test: Pruebas de integración QA y validación de banderas de la ALU,closes #7
+In Progress,#8,docs: Documentación técnica README.md y arquitectura en Mermaid,closes #8
+To Do,#9,docs: Estructura y guion estratégico para la defensa oral,Pendiente
+To Do,#10,docs: Cierre del proyecto y auditoría de historial de commits,Pendiente
